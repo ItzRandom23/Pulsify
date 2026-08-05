@@ -645,10 +645,15 @@ class Node {
         // queue for that stale event skips the refreshed track (and can leave
         // the app reporting no current track while audio is still audible).
         const currentTrack = player.queue?.current;
+        const eventTrack = payload?.track;
+        const eventTrackKey = typeof eventTrack === "string"
+            ? eventTrack
+            : eventTrack?.encoded || eventTrack?.track || null;
         const eventGeneration = track?.customData?.playbackGeneration;
         const currentGeneration = currentTrack?.customData?.playbackGeneration;
         if (
             !currentTrack ||
+            (eventTrackKey && currentTrack.track && eventTrackKey !== currentTrack.track) ||
             (track?.track && currentTrack.track && track.track !== currentTrack.track) ||
             (eventGeneration != null && currentGeneration != null && eventGeneration !== currentGeneration)
         ) {
