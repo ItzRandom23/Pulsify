@@ -389,10 +389,14 @@ class Player {
         if (!this.queue.current)
             throw new RangeError("No current track.");
         const finalOptions = playOptions
-            ? playOptions
+            ? { ...playOptions }
             : ["startTime", "endTime", "noReplace"].every((v) => Object.keys(optionsOrTrack || {}).includes(v))
-                ? optionsOrTrack
+                ? { ...optionsOrTrack }
                 : {};
+        if (finalOptions.startTime != null) {
+            finalOptions.position = finalOptions.startTime;
+            delete finalOptions.startTime;
+        }
         await this.node.rest.updatePlayer({
             guildId: this.guildId,
             data: {
@@ -401,7 +405,7 @@ class Player {
             },
         });
         this.playing = true;
-        this.position = 0;
+        this.position = Number(finalOptions.position) || 0;
         return this;
     }
     /**
