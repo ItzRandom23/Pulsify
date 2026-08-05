@@ -651,10 +651,14 @@ class Node {
             : eventTrack?.encoded || eventTrack?.track || null;
         const eventGeneration = track?.customData?.playbackGeneration;
         const currentGeneration = currentTrack?.customData?.playbackGeneration;
+        const playbackState = player.get?.("coolMusicPlaybackState");
+        const manualSkipInFlight = playbackState?.lastOperation === "skip" &&
+            playbackState?.skipTrackKey &&
+            currentTrack?.track === playbackState.skipTrackKey;
         if (
             !currentTrack ||
-            (eventTrackKey && currentTrack.track && eventTrackKey !== currentTrack.track) ||
-            (track?.track && currentTrack.track && track.track !== currentTrack.track) ||
+            (((eventTrackKey && currentTrack.track && eventTrackKey !== currentTrack.track) ||
+                (track?.track && currentTrack.track && track.track !== currentTrack.track)) && !manualSkipInFlight) ||
             (eventGeneration != null && currentGeneration != null && eventGeneration !== currentGeneration)
         ) {
             this.manager.emit(
