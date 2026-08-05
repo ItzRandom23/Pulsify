@@ -179,7 +179,6 @@ class Manager extends events_1.EventEmitter {
             applemusic: "amsearch",
             audiomack: "admsearch",
             amazonmusic: "amzsearch",
-            shazam: "szsearch",
             gaana: "gnsearch",
             qobuz: "qbsearch",
             tidal: "tdsearch",
@@ -1066,7 +1065,6 @@ var SearchPlatform;
     SearchPlatform["Deezer"] = "dzsearch";
     SearchPlatform["Gaana"] = "gasearch";
     SearchPlatform["Jiosaavn"] = "jssearch";
-    SearchPlatform["Shazam"] = "szsearch";
     SearchPlatform["SoundCloud"] = "scsearch";
     SearchPlatform["Spotify"] = "spsearch";
     SearchPlatform["Qobuz"] = "qbsearch";

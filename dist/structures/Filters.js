@@ -43,7 +43,7 @@ class Filters {
      * of the Filters class for method chaining.
      */
     async updateFilters() {
-        const { distortion, equalizer, karaoke, rotation, timescale, vibrato, volume } = this;
+        const { distortion, equalizer, karaoke, rotation, timescale, vibrato, reverb, volume } = this;
         await this.player.node.rest.updatePlayer({
             data: {
                 filters: {
@@ -53,6 +53,7 @@ class Filters {
                     rotation,
                     timescale,
                     vibrato,
+                    reverb,
                     volume,
                 },
             },
@@ -122,6 +123,7 @@ class Filters {
         await this.setRotation(null);
         await this.setTimescale(null);
         await this.setVibrato(null);
+        this.reverb = null;
         await this.updateFilters();
         return this;
     }

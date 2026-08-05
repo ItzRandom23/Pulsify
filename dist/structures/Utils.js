@@ -100,7 +100,6 @@ class TrackUtils {
                 gaana: "Gaana",
                 jiosaavn: "Jiosaavn",
                 lastfm: "LastFM",
-                shazam: "Shazam",
                 soundcloud: "SoundCloud",
                 spotify: "Spotify",
                 tidal: "Tidal",
@@ -765,7 +764,6 @@ var TrackSourceTypes;
     TrackSourceTypes["Deezer"] = "deezer";
     TrackSourceTypes["Gaana"] = "gaana";
     TrackSourceTypes["Jiosaavn"] = "jiosaavn";
-    TrackSourceTypes["Shazam"] = "shazam";
     TrackSourceTypes["Qobuz"] = "qobuz";
     TrackSourceTypes["SoundCloud"] = "soundcloud";
     TrackSourceTypes["Spotify"] = "spotify";
