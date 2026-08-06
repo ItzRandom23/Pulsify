@@ -27,6 +27,17 @@ const configDir = path_1.default.dirname(sessionIdsFilePath);
 if (!fs_1.default.existsSync(configDir)) {
     fs_1.default.mkdirSync(configDir, { recursive: true });
 }
+function getEventTrackKey(eventTrack) {
+    if (typeof eventTrack === "string")
+        return eventTrack;
+    if (!eventTrack || typeof eventTrack !== "object")
+        return null;
+    if (typeof eventTrack.encoded === "string")
+        return eventTrack.encoded;
+    if (typeof eventTrack.track?.encoded === "string")
+        return eventTrack.track.encoded;
+    return null;
+}
 class Node {
     options;
     /** The socket for the node. */
@@ -645,10 +656,7 @@ class Node {
         // queue for that stale event skips the refreshed track (and can leave
         // the app reporting no current track while audio is still audible).
         const currentTrack = player.queue?.current;
-        const eventTrack = payload?.track;
-        const eventTrackKey = typeof eventTrack === "string"
-            ? eventTrack
-            : eventTrack?.encoded || eventTrack?.track || null;
+        const eventTrackKey = getEventTrackKey(payload?.track);
         const eventGeneration = track?.customData?.playbackGeneration;
         const currentGeneration = currentTrack?.customData?.playbackGeneration;
         const playbackState = player.get?.("coolMusicPlaybackState");
