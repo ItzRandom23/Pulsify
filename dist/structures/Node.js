@@ -671,7 +671,11 @@ class Node {
         ) {
             this.manager.emit(
                 Manager_1.ManagerEventTypes.Debug,
-                `[NODE] Ignoring stale track-end event for ${player.guildId}`
+                `[NODE] Ignoring stale track-end event for ${player.guildId}: ` +
+                    `reason=${reason} event=${eventTrackKey || "none"} ` +
+                    `eventTrack=${track?.track || "none"} current=${currentTrack?.track || "none"} ` +
+                    `queue=${player.queue?.length || 0} eventGeneration=${eventGeneration ?? "none"} ` +
+                    `currentGeneration=${currentGeneration ?? "none"}`
             );
             return;
         }
@@ -823,7 +827,7 @@ class Node {
         this.manager.emit(Manager_1.ManagerEventTypes.TrackEnd, player, track, payload);
         if (this.manager.options.playNextOnEnd) {
             if (player.queue.current) {
-                await player.play();
+                await this.playCurrentTrack(player, track, payload);
             }
             else {
                 await this.queueEnd(player, track, player.isAutoplay
@@ -871,11 +875,34 @@ class Node {
         // If autoplay is enabled, play the next track
         if (playNextOnEnd) {
             if (queue.current) {
-                await player.play();
+                await this.playCurrentTrack(player, track, payload);
             }
             else {
                 await this.queueEnd(player, track, payload);
             }
+        }
+    }
+    async playCurrentTrack(player, track, payload) {
+        if (!player.queue?.current) {
+            await this.queueEnd(player, track, payload);
+            return false;
+        }
+        try {
+            await player.play();
+            return true;
+        }
+        catch (error) {
+            const failedTrack = player.queue.current;
+            this.manager.emit(Manager_1.ManagerEventTypes.Debug, `[NODE] Next-track play failed for ${player.guildId}: ${error?.message || error}`);
+            if (!failedTrack) {
+                await this.queueEnd(player, track, payload);
+                return false;
+            }
+            await this.handleFailedTrack(player, failedTrack, {
+                ...payload,
+                reason: Utils_1.TrackEndReasonTypes.LoadFailed,
+            });
+            return false;
         }
     }
     /**
@@ -897,7 +924,7 @@ class Node {
         // If autoplay is enabled, play the next track
         if (this.manager.options.playNextOnEnd) {
             if (player.queue.current) {
-                await player.play();
+                await this.playCurrentTrack(player, track, payload);
             }
             else {
                 await this.queueEnd(player, track, payload);
