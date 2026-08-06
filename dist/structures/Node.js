@@ -651,10 +651,9 @@ class Node {
      */
     async trackEnd(player, track, payload) {
         const { reason } = payload;
-        // A refreshed track can replace queue.current while Lavalink is still
-        // delivering the end event for the old encoded stream. Advancing the
-        // queue for that stale event skips the refreshed track (and can leave
-        // the app reporting no current track while audio is still audible).
+        // Re-resolving a track after a long pause replaces queue.current while
+        // Lavalink may still deliver the end event for the expired stream. Do
+        // not let that stale event advance past the refreshed current track.
         const currentTrack = player.queue?.current;
         const eventTrackKey = getEventTrackKey(payload?.track);
         const eventGeneration = track?.customData?.playbackGeneration;
@@ -663,20 +662,15 @@ class Node {
         const manualSkipInFlight = playbackState?.lastOperation === "skip" &&
             playbackState?.skipTrackKey &&
             currentTrack?.track === playbackState.skipTrackKey;
-        if (
-            !currentTrack ||
-            (((eventTrackKey && currentTrack.track && eventTrackKey !== currentTrack.track) ||
-                (track?.track && currentTrack.track && track.track !== currentTrack.track)) && !manualSkipInFlight) ||
-            (eventGeneration != null && currentGeneration != null && eventGeneration !== currentGeneration)
-        ) {
-            this.manager.emit(
-                Manager_1.ManagerEventTypes.Debug,
-                `[NODE] Ignoring stale track-end event for ${player.guildId}: ` +
-                    `reason=${reason} event=${eventTrackKey || "none"} ` +
-                    `eventTrack=${track?.track || "none"} current=${currentTrack?.track || "none"} ` +
-                    `queue=${player.queue?.length || 0} eventGeneration=${eventGeneration ?? "none"} ` +
-                    `currentGeneration=${currentGeneration ?? "none"}`
-            );
+        if (!currentTrack ||
+            ((((eventTrackKey && currentTrack.track && eventTrackKey !== currentTrack.track) ||
+                (track?.track && currentTrack.track && track.track !== currentTrack.track))) && !manualSkipInFlight) ||
+            (eventGeneration != null && currentGeneration != null && eventGeneration !== currentGeneration)) {
+            this.manager.emit(Manager_1.ManagerEventTypes.Debug, `[NODE] Ignoring stale track-end event for ${player.guildId}: ` +
+                `reason=${reason} event=${eventTrackKey || "none"} ` +
+                `eventTrack=${track?.track || "none"} current=${currentTrack?.track || "none"} ` +
+                `queue=${player.queue?.length || 0} eventGeneration=${eventGeneration ?? "none"} ` +
+                `currentGeneration=${currentGeneration ?? "none"}`);
             return;
         }
         const signature = `${track?.track ?? track?.identifier ?? "unknown"}:${reason}`;
@@ -708,17 +702,6 @@ class Node {
                 // If the track was forcibly replaced
                 if (player.queue.length) {
                     await this.playNextTrack(player, track, payload);
-                }
-                else if (
-                    player.isAutoplay &&
-                    await this.handleAutoplay(player, track, {
-                        ...payload,
-                        // A manual skip should consume the next autoplay
-                        // recommendation just like a naturally finished track.
-                        reason: Utils_1.TrackEndReasonTypes.Finished,
-                    })
-                ) {
-                    player.set("queueEndInProgress", false);
                 }
                 else {
                     await this.queueEnd(player, track, payload);
@@ -827,7 +810,7 @@ class Node {
         this.manager.emit(Manager_1.ManagerEventTypes.TrackEnd, player, track, payload);
         if (this.manager.options.playNextOnEnd) {
             if (player.queue.current) {
-                await this.playCurrentTrack(player, track, payload);
+                await player.play();
             }
             else {
                 await this.queueEnd(player, track, player.isAutoplay
@@ -875,34 +858,11 @@ class Node {
         // If autoplay is enabled, play the next track
         if (playNextOnEnd) {
             if (queue.current) {
-                await this.playCurrentTrack(player, track, payload);
+                await player.play();
             }
             else {
                 await this.queueEnd(player, track, payload);
             }
-        }
-    }
-    async playCurrentTrack(player, track, payload) {
-        if (!player.queue?.current) {
-            await this.queueEnd(player, track, payload);
-            return false;
-        }
-        try {
-            await player.play();
-            return true;
-        }
-        catch (error) {
-            const failedTrack = player.queue.current;
-            this.manager.emit(Manager_1.ManagerEventTypes.Debug, `[NODE] Next-track play failed for ${player.guildId}: ${error?.message || error}`);
-            if (!failedTrack) {
-                await this.queueEnd(player, track, payload);
-                return false;
-            }
-            await this.handleFailedTrack(player, failedTrack, {
-                ...payload,
-                reason: Utils_1.TrackEndReasonTypes.LoadFailed,
-            });
-            return false;
         }
     }
     /**
@@ -924,7 +884,7 @@ class Node {
         // If autoplay is enabled, play the next track
         if (this.manager.options.playNextOnEnd) {
             if (player.queue.current) {
-                await this.playCurrentTrack(player, track, payload);
+                await player.play();
             }
             else {
                 await this.queueEnd(player, track, payload);
@@ -944,8 +904,8 @@ class Node {
         if (player.get("queueEndInProgress"))
             return;
         player.set("queueEndInProgress", true);
+        player.queue.current = null;
         if (!player.isAutoplay) {
-            player.queue.current = null;
             player.clearAutoplayPool();
             player.playing = false;
             this.manager.emit(Manager_1.ManagerEventTypes.QueueEnd, player, track, payload);
@@ -962,7 +922,6 @@ class Node {
             attempt++;
         }
         // If all attempts fail, reset the player state and emit queueEnd
-        player.queue.current = null;
         player.clearAutoplayPool();
         player.playing = false;
         this.manager.emit(Manager_1.ManagerEventTypes.QueueEnd, player, track, payload);

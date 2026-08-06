@@ -1781,6 +1781,9 @@ declare class Filters {
     rotation: rotationOptions | null;
     timescale: timescaleOptions | null;
     vibrato: vibratoOptions | null;
+    tremoloOptions: tremoloOptions | null;
+    channelMix: channelMixOptions | null;
+    lowPass: lowPassOptions | null;
     reverb: reverbOptions | null;
     volume: number;
     bassBoostlevel: number;
@@ -1791,7 +1794,8 @@ declare class Filters {
      *
      * This method sends a request to the player's node to update the filter settings
      * based on the current properties of the `Filters` instance. The filters include
-     * distortion, equalizer, karaoke, rotation, timescale, vibrato, and volume. Once
+     * distortion, equalizer, karaoke, rotation, timescale, tremolo, vibrato, channel mix,
+     * low pass, reverb, and volume. Once
      * the request is sent, it ensures that the player's audio output reflects the
      * changes in filter settings.
      *
@@ -1810,6 +1814,7 @@ declare class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     private applyFilter;
+    private applyFilters;
     /**
      * Sets the status of a specific filter.
      *
@@ -1880,6 +1885,14 @@ declare class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     setVibrato(vibrato?: vibratoOptions): Promise<this>;
+    /** Sets the volume-oscillating tremolo filter. */
+    setTremolo(tremolo?: tremoloOptions): Promise<this>;
+    /** Sets stereo channel mixing. */
+    setChannelMix(channelMix?: channelMixOptions): Promise<this>;
+    /** Sets the low-pass smoothing filter. */
+    setLowPass(lowPass?: lowPassOptions): Promise<this>;
+    /** Sets the optional reverb plugin filter. */
+    setReverb(reverb?: reverbOptions): Promise<this>;
     /**
      * Sets the own rotation options effect to the audio.
      *
@@ -2129,6 +2142,22 @@ interface vibratoOptions {
     frequency: number;
     depth: number;
 }
+/** Options for applying tremolo to the audio volume. */
+interface tremoloOptions {
+    frequency?: number;
+    depth?: number;
+}
+/** Options for mixing the left and right audio channels. */
+interface channelMixOptions {
+    leftToLeft?: number;
+    leftToRight?: number;
+    rightToLeft?: number;
+    rightToRight?: number;
+}
+/** Options for suppressing high frequencies. */
+interface lowPassOptions {
+    smoothing?: number;
+}
 /** Options for applying rotation effect to audio. */
 interface rotationOptions {
     rotationHz: number;
@@ -2171,6 +2200,10 @@ declare enum AvailableFilters {
     SetTimescale = "setTimescale",
     TV = "tv",
     Vibrato = "vibrato",
+    SetTremolo = "setTremolo",
+    SetChannelMix = "setChannelMix",
+    SetLowPass = "setLowPass",
+    SetReverb = "setReverb",
     Vaporwave = "vaporwave",
     Pop = "pop",
     Party = "party",

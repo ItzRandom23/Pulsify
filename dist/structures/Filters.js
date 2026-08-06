@@ -10,6 +10,9 @@ class Filters {
     rotation;
     timescale;
     vibrato;
+    tremoloOptions;
+    channelMix;
+    lowPass;
     reverb;
     volume;
     bassBoostlevel;
@@ -22,6 +25,10 @@ class Filters {
         this.rotation = null;
         this.timescale = null;
         this.vibrato = null;
+        this.tremoloOptions = null;
+        this.channelMix = null;
+        this.lowPass = null;
+        this.reverb = null;
         this.volume = 1.0;
         this.bassBoostlevel = 0;
         // Initialize filter status
@@ -43,7 +50,7 @@ class Filters {
      * of the Filters class for method chaining.
      */
     async updateFilters() {
-        const { distortion, equalizer, karaoke, rotation, timescale, vibrato, reverb, volume } = this;
+        const { distortion, equalizer, karaoke, rotation, timescale, vibrato, tremoloOptions, channelMix, lowPass, reverb, volume } = this;
         await this.player.node.rest.updatePlayer({
             data: {
                 filters: {
@@ -53,6 +60,9 @@ class Filters {
                     rotation,
                     timescale,
                     vibrato,
+                    tremolo: tremoloOptions,
+                    channelMix,
+                    lowPass,
                     reverb,
                     volume,
                 },
@@ -73,6 +83,13 @@ class Filters {
      */
     async applyFilter(filter, updateFilters = true) {
         this[filter.property] = filter.value;
+        if (updateFilters) {
+            await this.updateFilters();
+        }
+        return this;
+    }
+    async applyFilters(filters, updateFilters = true) {
+        Object.assign(this, filters);
         if (updateFilters) {
             await this.updateFilters();
         }
@@ -116,14 +133,18 @@ class Filters {
             acc[filter] = false;
             return acc;
         }, {});
-        this.player.filters = new Filters(this.player);
-        await this.setEqualizer([]);
-        await this.setDistortion(null);
-        await this.setKaraoke(null);
-        await this.setRotation(null);
-        await this.setTimescale(null);
-        await this.setVibrato(null);
+        this.distortion = null;
+        this.equalizer = [];
+        this.karaoke = null;
+        this.rotation = null;
+        this.timescale = null;
+        this.vibrato = null;
+        this.tremoloOptions = null;
+        this.channelMix = null;
+        this.lowPass = null;
         this.reverb = null;
+        this.volume = 1.0;
+        this.bassBoostlevel = 0;
         await this.updateFilters();
         return this;
     }
@@ -184,6 +205,22 @@ class Filters {
         return vibrato
             ? result.setFilterStatus(AvailableFilters.Vibrato, true)
             : (await this.applyFilter({ property: "vibrato", value: null })).setFilterStatus(AvailableFilters.Vibrato, false);
+    }
+    async setTremolo(tremolo) {
+        const result = await this.applyFilter({ property: "tremoloOptions", value: tremolo ?? null });
+        return result.setFilterStatus(AvailableFilters.SetTremolo, !!tremolo);
+    }
+    async setChannelMix(channelMix) {
+        const result = await this.applyFilter({ property: "channelMix", value: channelMix ?? null });
+        return result.setFilterStatus(AvailableFilters.SetChannelMix, !!channelMix);
+    }
+    async setLowPass(lowPass) {
+        const result = await this.applyFilter({ property: "lowPass", value: lowPass ?? null });
+        return result.setFilterStatus(AvailableFilters.SetLowPass, !!lowPass);
+    }
+    async setReverb(reverb) {
+        const result = await this.applyFilter({ property: "reverb", value: reverb ?? null });
+        return result.setFilterStatus(AvailableFilters.SetReverb, !!reverb);
     }
     /**
      * Sets the own rotation options effect to the audio.
@@ -265,7 +302,7 @@ class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     async chipmunk(status) {
-        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 1.5, pitch: 1.5, rate: 1.5 } : null });
+        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 1.08, pitch: 1.35, rate: 1.0 } : null });
         return status
             ? result.setFilterStatus(AvailableFilters.Chipmunk, true)
             : (await this.applyFilter({ property: "timescale", value: null })).setFilterStatus(AvailableFilters.Chipmunk, false);
@@ -280,7 +317,7 @@ class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     async china(status) {
-        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 1.0, pitch: 0.5, rate: 1.0 } : null });
+        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 1.0, pitch: 0.82, rate: 1.0 } : null });
         return status
             ? result.setFilterStatus(AvailableFilters.China, true)
             : (await this.applyFilter({ property: "timescale", value: null })).setFilterStatus(AvailableFilters.China, false);
@@ -296,10 +333,15 @@ class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     async eightD(status) {
-        const result = await this.applyFilter({ property: "rotation", value: status ? { rotationHz: 0.2 } : null });
+        const result = await this.applyFilters(status
+            ? {
+                rotation: { rotationHz: 0.18 },
+                channelMix: { leftToLeft: 0.85, leftToRight: 0.15, rightToLeft: 0.15, rightToRight: 0.85 },
+            }
+            : { rotation: null, channelMix: null });
         return status
             ? result.setFilterStatus(AvailableFilters.EightD, true)
-            : (await this.applyFilter({ property: "rotation", value: null })).setFilterStatus(AvailableFilters.EightD, false);
+            : result.setFilterStatus(AvailableFilters.EightD, false);
     }
     /**
      * Toggles the nightcore effect on the audio.
@@ -312,7 +354,7 @@ class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     async nightcore(status) {
-        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 1.1, pitch: 1.125, rate: 1.05 } : null });
+        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 1.12, pitch: 1.18, rate: 1.0 } : null });
         return status
             ? result.setFilterStatus(AvailableFilters.Nightcore, true)
             : (await this.applyFilter({ property: "timescale", value: null })).setFilterStatus(AvailableFilters.Nightcore, false);
@@ -328,7 +370,7 @@ class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     async slowmo(status) {
-        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 0.7, pitch: 1.0, rate: 0.8 } : null });
+        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 0.78, pitch: 1.0, rate: 1.0 } : null });
         return status
             ? result.setFilterStatus(AvailableFilters.Slowmo, true)
             : (await this.applyFilter({ property: "timescale", value: null })).setFilterStatus(AvailableFilters.Slowmo, false);
@@ -390,10 +432,17 @@ class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     async vaporwave(status) {
-        const result = await this.applyFilter({ property: "equalizer", value: status ? filtersEqualizers_1.vaporwaveEqualizer : [] });
+        const result = await this.applyFilters(status
+            ? {
+                equalizer: filtersEqualizers_1.vaporwaveEqualizer,
+                timescale: { speed: 0.9, pitch: 0.85, rate: 1.0 },
+                rotation: { rotationHz: 0.05 },
+                reverb: { wet: 0.18, dry: 0.92, roomSize: 0.45, damping: 0.65 },
+            }
+            : { equalizer: [], timescale: null, rotation: null, reverb: null });
         return status
             ? result.setFilterStatus(AvailableFilters.Vaporwave, true)
-            : (await this.applyFilter({ property: "equalizer", value: [] })).setFilterStatus(AvailableFilters.Vaporwave, false);
+            : result.setFilterStatus(AvailableFilters.Vaporwave, false);
     }
     /**
      * Toggles the distortion effect on the audio.
@@ -409,13 +458,13 @@ class Filters {
         return status
             ? this.setDistortion({
                 sinOffset: 0,
-                sinScale: 0.2,
+                sinScale: 0.15,
                 cosOffset: 0,
-                cosScale: 0.2,
+                cosScale: 0.12,
                 tanOffset: 0,
-                tanScale: 0.2,
+                tanScale: 0.1,
                 offset: 0,
-                scale: 1.2,
+                scale: 1.05,
             }).then((result) => result.setFilterStatus(AvailableFilters.Distort, true))
             : this.setDistortion().then((result) => result.setFilterStatus(AvailableFilters.Distort, false));
     }
@@ -442,7 +491,7 @@ class Filters {
      * @returns {Promise<this>} - Returns the current instance of the Filters class for method chaining.
      */
     async party(status) {
-        const result = await this.applyFilter({ property: "equalizer", value: status ? filtersEqualizers_1.popEqualizer : [] });
+        const result = await this.applyFilter({ property: "equalizer", value: status ? filtersEqualizers_1.partyEqualizer : [] });
         return status
             ? result.setFilterStatus(AvailableFilters.Party, true)
             : (await this.applyFilter({ property: "equalizer", value: [] })).setFilterStatus(AvailableFilters.Party, false);
@@ -498,10 +547,10 @@ class Filters {
      * @returns {this} - Returns the current instance of the Filters class for method chaining.
      */
     async tremolo(status) {
-        const result = await this.applyFilter({ property: "vibrato", value: status ? { frequency: 5, depth: 0.5 } : null });
+        const result = await this.setTremolo(status ? { frequency: 4, depth: 0.35 } : null);
         return status
             ? result.setFilterStatus(AvailableFilters.Tremolo, true)
-            : (await this.applyFilter({ property: "vibrato", value: null })).setFilterStatus(AvailableFilters.Tremolo, false);
+            : result.setFilterStatus(AvailableFilters.Tremolo, false);
     }
     /**
      * Toggless a darthvader effect on the audio.
@@ -511,10 +560,12 @@ class Filters {
      * @returns {this} - Returns the current instance of the Filters class for method chaining.
      */
     async darthvader(status) {
-        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 1.0, pitch: 0.5, rate: 1.0 } : null });
+        const result = await this.applyFilters(status
+            ? { equalizer: filtersEqualizers_1.demonEqualizer, timescale: { speed: 0.92, pitch: 0.68, rate: 1.0 } }
+            : { equalizer: [], timescale: null });
         return status
             ? result.setFilterStatus(AvailableFilters.Darthvader, true)
-            : (await this.applyFilter({ property: "timescale", value: null })).setFilterStatus(AvailableFilters.Darthvader, false);
+            : result.setFilterStatus(AvailableFilters.Darthvader, false);
     }
     /**
      * Toggles a daycore effect on the audio.
@@ -524,7 +575,7 @@ class Filters {
      * @returns {this} - Returns the current instance of the Filters class for method chaining.
      */
     async daycore(status) {
-        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 0.7, pitch: 0.8, rate: 0.8 } : null });
+        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 0.85, pitch: 0.82, rate: 1.0 } : null });
         return status
             ? result.setFilterStatus(AvailableFilters.Daycore, true)
             : (await this.applyFilter({ property: "timescale", value: null })).setFilterStatus(AvailableFilters.Daycore, false);
@@ -537,7 +588,7 @@ class Filters {
      * @returns {this} - Returns the current instance of the Filters class for method chaining
      */
     async doubletime(status) {
-        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 2.0, pitch: 1.0, rate: 2.0 } : null });
+        const result = await this.applyFilter({ property: "timescale", value: status ? { speed: 1.5, pitch: 1.0, rate: 1.0 } : null });
         return status
             ? result.setFilterStatus(AvailableFilters.Doubletime, true)
             : (await this.applyFilter({ property: "timescale", value: null })).setFilterStatus(AvailableFilters.Doubletime, false);
@@ -556,15 +607,15 @@ class Filters {
         const filters = status
             ? {
                 equalizer: filtersEqualizers_1.demonEqualizer,
-                timescale: { pitch: 0.8 },
-                reverb: { wet: 0.7, dry: 0.3, roomSize: 0.8, damping: 0.5 },
+                timescale: { speed: 0.92, pitch: 0.72, rate: 1.0 },
+                reverb: { wet: 0.45, dry: 0.75, roomSize: 0.8, damping: 0.55 },
             }
             : {
                 equalizer: [],
                 timescale: null,
                 reverb: null,
             };
-        await Promise.all(Object.entries(filters).map(([property, value]) => this.applyFilter({ property: property, value })));
+        await this.applyFilters(filters);
         this.setFilterStatus(AvailableFilters.Demon, status);
         return this;
     }
@@ -584,6 +635,10 @@ var AvailableFilters;
     AvailableFilters["SetTimescale"] = "setTimescale";
     AvailableFilters["TV"] = "tv";
     AvailableFilters["Vibrato"] = "vibrato";
+    AvailableFilters["SetTremolo"] = "setTremolo";
+    AvailableFilters["SetChannelMix"] = "setChannelMix";
+    AvailableFilters["SetLowPass"] = "setLowPass";
+    AvailableFilters["SetReverb"] = "setReverb";
     AvailableFilters["Vaporwave"] = "vaporwave";
     AvailableFilters["Pop"] = "pop";
     AvailableFilters["Party"] = "party";
