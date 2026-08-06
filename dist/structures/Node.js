@@ -38,6 +38,18 @@ function getEventTrackKey(eventTrack) {
         return eventTrack.track.encoded;
     return null;
 }
+function isSupersededTrackEnd(player, eventTrackKey, currentTrackKey) {
+    if (!eventTrackKey || !currentTrackKey || eventTrackKey === currentTrackKey)
+        return false;
+    const now = Date.now();
+    const stored = player.get?.("Internal_SupersededTrackEnds");
+    const active = Array.isArray(stored)
+        ? stored.filter((entry) => entry?.track && Number(entry.until) > now)
+        : [];
+    if (active.length !== (stored?.length ?? 0))
+        player.set?.("Internal_SupersededTrackEnds", active);
+    return active.some((entry) => entry.track === eventTrackKey);
+}
 class Node {
     options;
     /** The socket for the node. */
@@ -651,26 +663,11 @@ class Node {
      */
     async trackEnd(player, track, payload) {
         const { reason } = payload;
-        // Re-resolving a track after a long pause replaces queue.current while
-        // Lavalink may still deliver the end event for the expired stream. Do
-        // not let that stale event advance past the refreshed current track.
         const currentTrack = player.queue?.current;
         const eventTrackKey = getEventTrackKey(payload?.track);
-        const eventGeneration = track?.customData?.playbackGeneration;
-        const currentGeneration = currentTrack?.customData?.playbackGeneration;
-        const playbackState = player.get?.("coolMusicPlaybackState");
-        const manualSkipInFlight = playbackState?.lastOperation === "skip" &&
-            playbackState?.skipTrackKey &&
-            currentTrack?.track === playbackState.skipTrackKey;
-        if (!currentTrack ||
-            ((((eventTrackKey && currentTrack.track && eventTrackKey !== currentTrack.track) ||
-                (track?.track && currentTrack.track && track.track !== currentTrack.track))) && !manualSkipInFlight) ||
-            (eventGeneration != null && currentGeneration != null && eventGeneration !== currentGeneration)) {
-            this.manager.emit(Manager_1.ManagerEventTypes.Debug, `[NODE] Ignoring stale track-end event for ${player.guildId}: ` +
-                `reason=${reason} event=${eventTrackKey || "none"} ` +
-                `eventTrack=${track?.track || "none"} current=${currentTrack?.track || "none"} ` +
-                `queue=${player.queue?.length || 0} eventGeneration=${eventGeneration ?? "none"} ` +
-                `currentGeneration=${currentGeneration ?? "none"}`);
+        if (isSupersededTrackEnd(player, eventTrackKey, currentTrack?.track)) {
+            this.manager.emit(Manager_1.ManagerEventTypes.Debug, `[NODE] Ignoring end event for superseded track in ${player.guildId}: ` +
+                `reason=${reason} event=${eventTrackKey} current=${currentTrack.track}`);
             return;
         }
         const signature = `${track?.track ?? track?.identifier ?? "unknown"}:${reason}`;

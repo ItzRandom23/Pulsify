@@ -381,6 +381,17 @@ class Player {
         this.lastActivityAt = Date.now();
         this.set("queueEndInProgress", false);
         if (typeof optionsOrTrack !== "undefined" && Utils_1.TrackUtils.validate(optionsOrTrack)) {
+            const previousTrackKey = this.queue.current?.track;
+            const nextTrackKey = optionsOrTrack.track;
+            if (previousTrackKey && nextTrackKey && previousTrackKey !== nextTrackKey) {
+                const now = Date.now();
+                const stored = this.get("Internal_SupersededTrackEnds");
+                const active = Array.isArray(stored)
+                    ? stored.filter((entry) => entry?.track && Number(entry.until) > now && entry.track !== previousTrackKey)
+                    : [];
+                active.push({ track: previousTrackKey, until: now + 60000 });
+                this.set("Internal_SupersededTrackEnds", active);
+            }
             this.queue.current = optionsOrTrack;
             if (!this.isAutoplayTrack(optionsOrTrack)) {
                 this.lastUserRequestedTrackId = optionsOrTrack.identifier ?? null;
