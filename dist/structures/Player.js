@@ -247,66 +247,90 @@ class Player {
      * @emits {PlayerStateUpdate} - Emitted when the player state is updated.
      */
     async destroy(disconnect = true) {
-        if (this.destroyRequested || this.state === Utils_1.StateTypes.Destroying || (this.state === Utils_1.StateTypes.Disconnected && !this.manager.players.has(this.guildId)))
+        // Guard on state instead of the destroyRequested latch: a destroy that
+        // hung or threw midway used to latch destroyRequested forever, leaving
+        // a ghost player that rejected every future destroy and made the bot
+        // refuse to join ("already connected to <#null>").
+        if (this.state === Utils_1.StateTypes.Destroying || (this.state === Utils_1.StateTypes.Disconnected && !this.manager.players.has(this.guildId)))
             return false;
         this.destroyRequested = true;
-        await this.eventQueue.catch(() => { });
-        const oldPlayer = this ? { ...this } : null;
         this.state = Utils_1.StateTypes.Destroying;
-        if (this.inactivityTimer) {
-            clearInterval(this.inactivityTimer);
-            this.inactivityTimer = null;
-        }
-
-        if (disconnect) {
-            await this.pause(true).catch(() => { });
-            await this.disconnect().catch(() => { });
-        }
-
-        // Stop any intervals or loops
-        if (this.dynamicLoopInterval) {
-            clearInterval(this.dynamicLoopInterval);
-            this.dynamicLoopInterval = null;
-        }
-
-        if (this.isAutoplay) {
-            this.isAutoplay = false;
-        }
-        this.autoplayEnabled = false;
-        this.clearAutoplayPool();
-
-        // Clear filters, queue, data
-        await this.node.rest.destroyPlayer(this.guildId).catch(() => { });
-        this.queue.clear();
-        this.filters = null;
-        this.queue.current = null;
-        this.queue.previous = [];
-
-        // Emit events
-        this.manager.emit(
-            Manager_1.ManagerEventTypes.PlayerStateUpdate,
-            oldPlayer,
-            null,
-            {
-                changeType: Manager_1.PlayerStateEventTypes.PlayerDestroy,
+        // A stuck event chain must never block destruction; it times out.
+        await Promise.race([
+            this.eventQueue.catch(() => { }),
+            new Promise((resolve) => {
+                const timer = setTimeout(resolve, 5000);
+                timer.unref?.();
+            }),
+        ]);
+        const oldPlayer = this ? { ...this } : null;
+        try {
+            if (this.inactivityTimer) {
+                clearInterval(this.inactivityTimer);
+                this.inactivityTimer = null;
             }
-        );
 
-        this.manager.emit(Manager_1.ManagerEventTypes.PlayerDestroy, this);
+            if (disconnect) {
+                await this.pause(true).catch(() => { });
+                await this.disconnect().catch(() => { });
+            }
 
-        // Safe delete
-        let deleted = false;
-        if (this.manager.players.has(this.guildId)) {
-            deleted = this.manager.players.delete(this.guildId);
+            // Stop any intervals or loops
+            if (this.dynamicLoopInterval) {
+                clearInterval(this.dynamicLoopInterval);
+                this.dynamicLoopInterval = null;
+            }
+
+            if (this.isAutoplay) {
+                this.isAutoplay = false;
+            }
+            this.autoplayEnabled = false;
+            this.clearAutoplayPool();
+
+            // Clear filters, queue, data
+            await this.node.rest.destroyPlayer(this.guildId).catch(() => { });
+            this.queue.clear();
+            this.filters = null;
+            this.queue.current = null;
+            this.queue.previous = [];
+
+            // Emit events
+            this.manager.emit(
+                Manager_1.ManagerEventTypes.PlayerStateUpdate,
+                oldPlayer,
+                null,
+                {
+                    changeType: Manager_1.PlayerStateEventTypes.PlayerDestroy,
+                }
+            );
+
+            this.manager.emit(Manager_1.ManagerEventTypes.PlayerDestroy, this);
+
+            // Safe delete
+            let deleted = false;
+            if (this.manager.players.has(this.guildId)) {
+                deleted = this.manager.players.delete(this.guildId);
+                if (!deleted) {
+                    console.warn(
+                        `[Player] Deletion failed despite existence in map for guild: ${this.guildId}`
+                    );
+                }
+            }
+
+            return deleted;
+        }
+        catch (error) {
+            this.manager.log?.("error", `[PLAYER] Destroy failed for guild ${this.guildId}: ${error?.message ?? error}`);
+            return false;
+        }
+        finally {
+            // Whether destroy completed, failed, or timed out on the event
+            // queue, the player must leave the map so a fresh player can be
+            // created for the guild.
+            this.manager.players.delete(this.guildId);
             this.manager.voiceUpdateDedupCache?.delete(this.guildId);
-            if (!deleted) {
-                console.warn(
-                    `[Player] Deletion failed despite existence in map for guild: ${this.guildId}`
-                );
-            }
+            this.destroyRequested = false;
         }
-
-        return deleted;
     }
     /**
      * Sets the player voice channel.
