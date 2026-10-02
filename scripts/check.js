@@ -8,7 +8,7 @@ function check(directory) {
     else if (file.endsWith(".js")) execFileSync(process.execPath, ["--check", file], { stdio: "inherit" });
   }
 }
-for (const directory of ["dist", "scripts", "test"]) {
+for (const directory of ["dist", "scripts", "test", "examples"]) {
   const fullPath = path.join(__dirname, "..", directory);
   if (fs.existsSync(fullPath)) check(fullPath);
 }
