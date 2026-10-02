@@ -6,7 +6,7 @@ Pulsify is a Lavalink v4 wrapper for Node.js and Discord music bots, maintained 
 
 Requires Node.js 22.19 or newer and discord.js 13 or 14.
 
-Install the GitHub v1.0.0 release after the repository is renamed:
+Install the GitHub v1.0.0 release:
 
 ```sh
 npm install github:ItzRandom23/Pulsify#v1.0.0

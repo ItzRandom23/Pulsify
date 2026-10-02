@@ -19,13 +19,7 @@ Download `pulsify-1.0.0.tgz` from this release and run:
 npm install ./pulsify-1.0.0.tgz
 ```
 
-Until the repository is renamed:
-
-```sh
-npm install github:ItzRandom23/magmastream-custom#v1.0.0
-```
-
-After the repository is renamed to Pulsify:
+Or install directly from GitHub:
 
 ```sh
 npm install github:ItzRandom23/Pulsify#v1.0.0
