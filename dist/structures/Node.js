@@ -21,7 +21,7 @@ var SponsorBlockSegment;
     SponsorBlockSegment["Filler"] = "filler";
 })(SponsorBlockSegment || (exports.SponsorBlockSegment = SponsorBlockSegment = {}));
 const validSponsorBlocks = Object.values(SponsorBlockSegment).map((v) => v.toLowerCase());
-const sessionIdsFilePath = path_1.default.join(process.cwd(), "magmastream", "dist", "sessionData", "sessionIds.json");
+const sessionIdsFilePath = path_1.default.join(require("../utils/sessionData").dataRoot, "dist", "sessionData", "sessionIds.json");
 let sessionIdsMap = new Map();
 const configDir = path_1.default.dirname(sessionIdsFilePath);
 if (!fs_1.default.existsSync(configDir)) {
@@ -131,7 +131,7 @@ class Node {
         this.rest = new Rest_1.Rest(this, this.manager);
         this.createSessionIdsFile();
         this.loadSessionIds();
-        // Create README file to inform the user about the magmastream folder
+        // Create README file to inform the user about the session data folder
         this.createReadmeFile();
     }
     /** Returns if connected to the Node. */
@@ -249,7 +249,9 @@ class Node {
         this.socket = new ws_1.default(`ws${this.options.useSSL ? "s" : ""}://${this.address}/v4/websocket`, { headers });
         this.socket.on("open", this.open.bind(this));
         this.socket.on("close", this.close.bind(this));
-        this.socket.on("message", this.message.bind(this));
+        this.socket.on("message", (data) => {
+            this.message(data).catch((error) => this.error(error));
+        });
         this.socket.on("error", this.error.bind(this));
         const debugInfo = {
             connected: this.connected,
@@ -1117,14 +1119,14 @@ class Node {
         return;
     }
     /**
-     * Creates a README.md or README.txt file in the magmastream directory
+     * Creates a README.md or README.txt file in the session data directory
      * if it doesn't already exist. This file is used to store player data
      * for autoresume and other features.
      * @private
      */
     createReadmeFile() {
-        const readmeFilePath = path_1.default.join(process.cwd(), "magmastream", "README.md");
-        const message = "Please do NOT delete the magmastream/ folder as it is used to store player data for autoresume etc.";
+        const readmeFilePath = path_1.default.join(require("../utils/sessionData").dataRoot, "README.md");
+        const message = "Please do NOT delete this Pulsify data folder; it stores player data for session recovery.";
         if (!fs_1.default.existsSync(readmeFilePath)) {
             fs_1.default.writeFileSync(readmeFilePath, message, "utf-8");
             this.manager.emit(Manager_1.ManagerEventTypes.Debug, `[NODE] Created README file at: ${readmeFilePath}`);

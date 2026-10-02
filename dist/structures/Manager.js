@@ -11,7 +11,7 @@ const promises_1 = tslib_1.__importDefault(require("fs/promises"));
 const path_1 = tslib_1.__importDefault(require("path"));
 const { fetch } = require("undici");
 /**
- * The main hub for interacting with Lavalink and using Magmastream,
+ * The main hub for interacting with Lavalink and using Pulsify,
  */
 class Manager extends events_1.EventEmitter {
     static activeManagers = new Set();
@@ -67,7 +67,7 @@ class Manager extends events_1.EventEmitter {
             ],
             playNextOnEnd: true,
             enablePriorityMode: false,
-            clientName: "Magmastream",
+            clientName: "Pulsify",
             defaultSearchPlatform: SearchPlatform.Deezer,
             autoPlaySearchPlatforms: [AutoPlayPlatform.Spotify, AutoPlayPlatform.Deezer, AutoPlayPlatform.Jiosaavn],
             useNode: UseNodeOptions.LeastPlayers,
@@ -436,7 +436,7 @@ class Manager extends events_1.EventEmitter {
             this.emit(ManagerEventTypes.Debug, `[MANAGER] Could not load Lavalink players for node ${nodeId}; skipping saved player restore.`);
             return;
         }
-        const playerStatesDir = path_1.default.join(process.cwd(), "magmastream", "dist", "sessionData", "players");
+        const playerStatesDir = path_1.default.join(require("../utils/sessionData").dataRoot, "dist", "sessionData", "players");
         try {
             // Check if the directory exists, and create it if it doesn't
             await promises_1.default.access(playerStatesDir).catch(async () => {
@@ -678,7 +678,7 @@ class Manager extends events_1.EventEmitter {
      * After saving and cleaning up, it exits the process.
      */
     async handleShutdown() {
-        console.warn("\x1b[31m%s\x1b[0m", "MAGMASTREAM WARNING: Shutting down! Please wait, saving active players...");
+        console.warn("\x1b[31m%s\x1b[0m", "PULSIFY WARNING: Shutting down! Please wait, saving active players...");
         try {
             const savePromises = Array.from(this.players.keys()).map(async (guildId) => {
                 try {
@@ -691,7 +691,7 @@ class Manager extends events_1.EventEmitter {
             await Promise.allSettled(savePromises);
             await this.cleanupInactivePlayers();
             setTimeout(() => {
-                console.warn("\x1b[32m%s\x1b[0m", "MAGMASTREAM INFO: Shutting down complete, exiting...");
+                console.warn("\x1b[32m%s\x1b[0m", "PULSIFY INFO: Shutting down complete, exiting...");
                 process.exit(0);
             }, 500);
         }
@@ -864,7 +864,7 @@ class Manager extends events_1.EventEmitter {
      * @returns {string} The path to the player's JSON file
      */
     async getPlayerFilePath(guildId) {
-        const configDir = path_1.default.join(process.cwd(), "magmastream", "dist", "sessionData", "players");
+        const configDir = path_1.default.join(require("../utils/sessionData").dataRoot, "dist", "sessionData", "players");
         try {
             await promises_1.default.mkdir(configDir, { recursive: true });
             return path_1.default.join(configDir, `${guildId}.json`);
@@ -935,7 +935,7 @@ class Manager extends events_1.EventEmitter {
      * This is done to prevent stale state files from accumulating on the file system.
      */
     async cleanupInactivePlayers() {
-        const playerStatesDir = path_1.default.join(process.cwd(), "magmastream", "dist", "sessionData", "players");
+        const playerStatesDir = path_1.default.join(require("../utils/sessionData").dataRoot, "dist", "sessionData", "players");
         try {
             // Check if the directory exists, and create it if it doesn't
             await promises_1.default.access(playerStatesDir).catch(async () => {

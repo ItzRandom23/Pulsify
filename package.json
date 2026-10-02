@@ -1,18 +1,19 @@
 {
-	"name": "magmastream",
-	"version": "0.0.1",
-	"description": "A user-friendly Lavalink client designed for NodeJS.",
+	"name": "pulsify",
+	"version": "1.0.0",
+	"description": "A Lavalink v4 client for Discord music bots with autoplay, filters, and session recovery.",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"files": [
-		"dist"
+		"dist",
+		"scripts",
+		"CHANGELOG.md"
 	],
 	"scripts": {
-		"build": "tsc",
-		"types": "rtb --dist dist",
-		"lint": "eslint src",
-		"lint:fix": "eslint --fix src",
-		"ci": "run-s lint:fix lint build types"
+		"build": "node scripts/check.js",
+		"lint": "node scripts/check.js",
+		"test": "node --test",
+		"ci": "npm run lint && npm test"
 	},
 	"devDependencies": {
 		"@favware/rollup-type-bundler": "^4.0.0",
@@ -43,7 +44,7 @@
 		"discord.js": ">=13.0.0 <15.0.0"
 	},
 	"engines": {
-		"node": ">=16.0.0"
+		"node": ">=22.19.0"
 	},
 	"eslintConfig": {
 		"root": true,
@@ -84,11 +85,16 @@
 		"documentation",
 		"open-source",
 		"lavalink",
-		"magmastream"
+		"pulsify"
 	],
 	"repository": {
-		"url": "git+https://github.com/ItzRandom23/magmastream-custom.git#main"
+		"type": "git",
+		"url": "git+https://github.com/ItzRandom23/Pulsify.git"
 	},
 	"author": "Itz Random",
-	"license": "Apache-2.0"
+	"license": "Apache-2.0",
+	"homepage": "https://github.com/ItzRandom23/Pulsify#readme",
+	"bugs": {
+		"url": "https://github.com/ItzRandom23/Pulsify/issues"
+	}
 }

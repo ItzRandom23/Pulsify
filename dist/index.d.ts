@@ -463,7 +463,7 @@ declare class Node {
      */
     deleteSponsorBlock(player: Player): Promise<void>;
     /**
-     * Creates a README.md or README.txt file in the magmastream directory
+     * Creates a README.md or README.txt file in the session data directory
      * if it doesn't already exist. This file is used to store player data
      * for autoresume and other features.
      * @private
@@ -918,7 +918,7 @@ interface PlayerUpdate {
 }
 
 /**
- * The main hub for interacting with Lavalink and using Magmastream,
+ * The main hub for interacting with Lavalink and using Pulsify,
  */
 declare class Manager extends EventEmitter {
     /** The map of players. */
@@ -1166,7 +1166,7 @@ interface ManagerOptions {
     /** The maximum number of previous tracks to store. */
     maxPreviousTracks?: number;
     /**
-     * Called before MagmaStream stops a track that raised a Lavalink exception.
+     * Called before Pulsify stops a track that raised a Lavalink exception.
      * Return true after recovering playback to prevent the default stop/skip path.
      */
     trackErrorRecovery?: (player: Player, track: Track, payload: TrackExceptionEvent) => boolean | Promise<boolean>;
